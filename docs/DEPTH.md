@@ -31,10 +31,14 @@
 | TRAP-26 | 旧版本复核 | 覆盖新结论 | 事务条件更新 | `app/store.py` | `tests/test_archive.py::test_stale_review` |
 | TRAP-23 | 休息与跨夜端点 | 重复或漏计 | 半开区间切片 | `app/modules/m4_segments/rules.py` | `tests/test_segments.py::test_break_removed` |
 | TRAP-19 | 假日与周末重叠 | 费率相加 | 假日优先 | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py::test_holiday_overrides_rest` |
+| TRAP-30 | 审批跨片段落段 | 先到先得让高倍率无法支付 | 高倍率优先 RATE_FIRST，同倍率按时间 | `app/modules/m5_calculate/allocation.py` | `tests/test_approvals.py::test_rate_first_high_multiplier_consumes_quota_first` |
+| TRAP-31 | 审批分钟拆分 | 浮点拆分失准 | Decimal 到分且金额=应付+不付 | `app/modules/m5_calculate/allocation.py` | `tests/test_approvals.py::test_cash_conservation_payable_plus_withheld_equals_amount` |
+| TRAP-32 | 审批/打卡更新 | 覆盖旧结果、重复耗用 | 哈希换新批次，旧批次 superseded 留档 | `app/store.py` | `tests/test_publish.py::test_new_run_marks_old_superseded_but_keeps_records` |
+| TRAP-33 | 对账未平封存 | 先封存后补对账 | 单事务门控，失败回滚保留旧版 | `app/store.py` | `tests/test_publish.py::test_seal_blocks_when_unbalanced` |
 
 ## 对账规则
 
-输入行数=采纳+隔离+空行+重复表头+完全重复；业务总数与计算证据独立求和。隔离行保留来源行、ID、原因码与原值。
+输入行数=采纳+隔离+空行+重复表头+完全重复；业务总数与计算证据独立求和。隔离行保留来源行、ID、原因码与原值。审批落段追加四项守恒：片段分钟守恒、员工额度守恒（已批=min(额度,实际)）、分币守恒（金额=应付+不付）、应付独立求和一致；任一不平则 balanced=false，禁止封存与导出。
 
 ## 已知不覆盖
 
